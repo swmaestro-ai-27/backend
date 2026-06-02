@@ -1,6 +1,6 @@
 # Workflow
 
-## Issue and Branches
+## Issues and Branches
 
 - Create or identify a GitHub Issue before starting substantive work.
 - Create branches as `<prefix>/<issue-num>`.
