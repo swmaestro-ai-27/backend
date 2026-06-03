@@ -15,7 +15,7 @@ Shared game rules, API contract drafts, and cross-repo decisions belong in the p
 
 ## Workflow
 
-- Follow `WORKFLOW.md` for issue, branch, commit, and PR rules.
+- Follow `.agents/docs/WORKFLOW.md` for issue, branch, commit, and PR rules.
 - Use `.github/PULL_REQUEST_TEMPLATE.md` for PR bodies.
 - For non-trivial implementation work, use the local `.agents/writing-plan` skill to create a plan under `.plan/` before coding.
 
