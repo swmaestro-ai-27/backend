@@ -18,7 +18,7 @@ Add GitHub Actions CI that builds the backend Docker image and pushes it to GitH
 
 - Repository currently has a FastAPI app but no Dockerfile or workflow.
 - The requested registry is interpreted as `ghcr.io` for GitHub Container Registry.
-- PRs should validate image builds without pushing.
+- Workflow should not run for pull requests.
 - `requirements.txt` was UTF-16 encoded, which can break normal Linux container installs; normalize it to UTF-8.
 
 ## Approach (Checklist)
