@@ -87,7 +87,7 @@ def get_character_messages(character_id: int, db: Session = Depends(get_db)):
             id=m.id,
             sender=m.sender,
             content=m.content,
-            createdAt=m.createdAt
+            created_at=m.createdAt
         )
         for m in messages_from_db
     ]
