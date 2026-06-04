@@ -19,6 +19,7 @@
 - repo secret `CLAUDE_CODE_OAUTH_TOKEN`을 사용한다.
 - 공식 `anthropics/claude-code-action@v1`를 사용한다.
 - PR 리뷰 코멘트 작성을 위해 `pull-requests: write` 권한이 필요하다.
+- Claude Code action의 GitHub App/OIDC token setup을 위해 `id-token: write` 권한이 필요하다.
 
 ## Approach (Checklist)
 - [x] **Step 0: Recon** (Inspect existing code, locate files)
@@ -36,7 +37,7 @@
 ## Risks & Rollback
 - **Risks:**
   - PR마다 Actions minutes와 Claude usage 발생
-  - fork PR에서는 secret 정책상 실행 제한 가능
+  - fork PR에서는 secret/OIDC 정책상 실행 제한 가능
 - **Rollback steps:** workflow 파일 제거
 
 ## Open Questions
