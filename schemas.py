@@ -1,10 +1,11 @@
 from datetime import datetime
 from typing import List
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 # 단서 (Clues) 관련 스키마
 # GET /api/clues 응답 내부의 개별 단서 객체
 class ClueStateElement(BaseModel):
+    user_id: str
     clue_id: int
     interacted: bool
 
@@ -20,6 +21,7 @@ class ClueListResponse(BaseModel):
 # 인물 상태 (Characters State) 관련 스키마
 # GET /api/characters 응답 내부의 개별 인물 객체
 class CharacterStateElement(BaseModel):
+    user_id: str
     characters_id: int  # 명세의 "characters_id" 반영
     interacted: bool
 
@@ -48,12 +50,14 @@ class ChatMessageResponse(BaseModel):
 # GET /api/characters/{characters_id}/messages 응답 내부의 개별 메시지 객체
 class ChatMessageElement(BaseModel):
     id: int
+    user_id: str
     sender: str
     content: str
-    created_at: datetime  # 명세의 camelCase 반영
+    created_at: datetime = Field(alias="createdAt")
 
     class Config:
         from_attributes = True
+        populate_by_name = True
 
 # GET /api/characters/{characters_id}/messages 최종 응답 구조
 class CharacterChatLogResponse(BaseModel):

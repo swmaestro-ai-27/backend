@@ -1,7 +1,9 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, Header, HTTPException
 from pydantic import BaseModel
 import models
 import schemas
+from agents.adapters import DatabaseAgentAdapter
+from agents.graphs.character_chat import CharacterChatGraph
 from database import SessionLocal, engine
 from sqlalchemy.orm import Session
 
@@ -16,16 +18,29 @@ def get_db():
     finally:
         db.close()
 
+
+def get_user_id(user_id: str = Header(..., alias="user_id")) -> str:
+    return user_id
+
 # 단서 조회처리
 @app.post("/api/clues/{clue_id}")
-def update_clue_state(clue_id: int, db: Session = Depends(get_db)):
+def update_clue_state(
+    clue_id: int,
+    user_id: str = Depends(get_user_id),
+    db: Session = Depends(get_db),
+):
     # 있는지 확인
-    clue_state = db.query(models.ClueState).filter(models.ClueState.clue_id == clue_id).first()
+    clue_state = (
+        db.query(models.ClueState)
+        .filter(models.ClueState.user_id == user_id)
+        .filter(models.ClueState.clue_id == clue_id)
+        .first()
+    )
 
     if clue_state:
         clue_state.interacted = True
     else:
-        clue_state = models.ClueState(clue_id = clue_id, interacted = True)
+        clue_state = models.ClueState(user_id=user_id, clue_id=clue_id, interacted=True)
         db.add(clue_state)
 
     db.commit()
@@ -33,39 +48,67 @@ def update_clue_state(clue_id: int, db: Session = Depends(get_db)):
 
 # 단서 조회 여부
 @app.get("/api/clues", response_model=schemas.ClueListResponse)
-def get_clues(db: Session = Depends(get_db)):
+def get_clues(
+    user_id: str = Depends(get_user_id),
+    db: Session = Depends(get_db),
+):
 
-    clue_list = db.query(models.ClueState).all()
+    clue_list = (
+        db.query(models.ClueState)
+        .filter(models.ClueState.user_id == user_id)
+        .all()
+    )
 
     response = [
-        schemas.ClueStateElement(clue_id = c.clue_id, interacted = c.interacted)
+        schemas.ClueStateElement(user_id=c.user_id, clue_id=c.clue_id, interacted=c.interacted)
         for c in clue_list
     ]
 
     return schemas.ClueListResponse(clues= response)
 
 # 인물 조회처리
-@app.post("/api/character/{character_id}")
-def update_character_state(character_id: int, db: Session = Depends(get_db)):
+@app.post("/api/characters/{character_id}")
+def update_character_state(
+    character_id: int,
+    user_id: str = Depends(get_user_id),
+    db: Session = Depends(get_db),
+):
 
-    character_state = db.query(models.CharacterState).filter(models.CharacterState.character_id == character_id).first()
+    character_state = (
+        db.query(models.CharacterState)
+        .filter(models.CharacterState.user_id == user_id)
+        .filter(models.CharacterState.character_id == character_id)
+        .first()
+    )
 
     if character_state:
         character_state.interacted = True
     else:
-        character_state = models.CharacterState(character_id = character_id, interacted = True)
+        character_state = models.CharacterState(user_id=user_id, character_id=character_id, interacted=True)
+        db.add(character_state)
 
     db.commit()
     return {"message": f"Character {character_id} state updated successfully."}
 
 # 인물 조회 여부
 @app.get("/api/characters", response_model=schemas.CharacterListResponse)
-def get_characters(db: Session = Depends(get_db)):
-    character_list = db.query(models.CharacterState).all()
+def get_characters(
+    user_id: str = Depends(get_user_id),
+    db: Session = Depends(get_db),
+):
+    character_list = (
+        db.query(models.CharacterState)
+        .filter(models.CharacterState.user_id == user_id)
+        .all()
+    )
 
     # 명세서의 JSON 구조 {"characters": [...]} 형태로 변환 (characters_id 매칭)
     response_data = [
-        schemas.CharacterStateElement(characters_id=ch.character_id, interacted=ch.is_interacted)
+        schemas.CharacterStateElement(
+            user_id=ch.user_id,
+            characters_id=ch.character_id,
+            interacted=ch.interacted,
+        )
         for ch in character_list
     ]
 
@@ -73,21 +116,27 @@ def get_characters(db: Session = Depends(get_db)):
 
 # 인물 대화 불러오기
 @app.get("/api/characters/{character_id}/messages")
-def get_character_messages(character_id: int, db: Session = Depends(get_db)):
+def get_character_messages(
+    character_id: int,
+    user_id: str = Depends(get_user_id),
+    db: Session = Depends(get_db),
+):
 
     messages_from_db = (
         db.query(models.ChatMessage)
+        .filter(models.ChatMessage.user_id == user_id)
         .filter(models.ChatMessage.character_id == character_id)
-        .order_by(models.ChatMessage.createdAt.asc())
+        .order_by(models.ChatMessage.created_at.asc())
         .all()
     )
 
     response_messages = [
         schemas.ChatMessageElement(
             id=m.id,
+            user_id=m.user_id,
             sender=m.sender,
             content=m.content,
-            created_at=m.createdAt
+            created_at=m.created_at
         )
         for m in messages_from_db
     ]
@@ -102,21 +151,23 @@ def get_character_messages(character_id: int, db: Session = Depends(get_db)):
 def create_character_message(
     character_id: int,
     payload: schemas.ChatMessageCreate,
+    user_id: str = Depends(get_user_id),
     db: Session = Depends(get_db)
 ):
-    user_msg = models.ChatMessage(sender = "me", character_id = character_id, content=payload.content)
-    db.add(user_msg)
-
-    reply_content = "이 곳에는 LLM의 응답이 들어가게 됨."
-
-    system_msg = models.ChatMessage(sender = character_id, character_id = character_id, content = reply_content)
-    db.add(system_msg)
-
+    adapter = DatabaseAgentAdapter(db, session_id=user_id)
+    graph = CharacterChatGraph(adapter)
+    result = graph.invoke(
+        {
+            "session_id": user_id,
+            "character_id": character_id,
+            "user_message": payload.content,
+        }
+    )
     db.commit()
 
     return schemas.ChatMessageResponse(
         character_id = character_id,
-        content=reply_content
+        content=result["content"]
     )
 
 @app.post("/api/deductions", response_model = schemas.DeductionResponse)

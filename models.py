@@ -7,6 +7,7 @@ class ClueState(Base):
     __tablename__ = "clue_state"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    user_id = Column(Text, index=True, nullable=False)
     clue_id = Column(Integer, index=True, nullable=False)
     interacted = Column(Boolean, default=True, nullable=False)
 
@@ -16,6 +17,7 @@ class CharacterState(Base):
     __tablename__ = "character_state"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    user_id = Column(Text, index=True, nullable=False)
     character_id = Column(Integer, index=True, nullable=False)
     interacted = Column(Boolean, default=True, nullable=False)
 
@@ -25,6 +27,7 @@ class ChatMessage(Base):
     __tablename__ = "chat_message"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    user_id = Column(Text, index=True, nullable=False)
     sender = Column(Text, nullable=False)
     character_id = Column(Integer, index=True, nullable=False)
     content = Column(Text, nullable=False)
