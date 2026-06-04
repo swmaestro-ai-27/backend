@@ -20,6 +20,7 @@
 - 공식 `anthropics/claude-code-action@v1`를 사용한다.
 - PR 리뷰 코멘트 작성을 위해 `pull-requests: write` 권한이 필요하다.
 - Claude Code action의 GitHub App/OIDC token setup을 위해 `id-token: write` 권한이 필요하다.
+- Claude GitHub App이 설치되지 않은 repo에서도 동작하도록 workflow `GITHUB_TOKEN`을 action에 전달한다.
 
 ## Approach (Checklist)
 - [x] **Step 0: Recon** (Inspect existing code, locate files)
