@@ -1,5 +1,6 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Header, status
 from pydantic import BaseModel
+from typing import Annotated
 import models
 import schemas
 from database import SessionLocal, engine
@@ -18,9 +19,12 @@ def get_db():
 
 # 단서 조회처리
 @app.post("/api/clues/{clue_id}")
-def update_clue_state(clue_id: int, db: Session = Depends(get_db)):
+def update_clue_state(user_id: Annotated[str, Header()], clue_id: int, db: Session = Depends(get_db)):
     # 있는지 확인
-    clue_state = db.query(models.ClueState).filter(models.ClueState.clue_id == clue_id).first()
+    clue_state = db.query(models.ClueState).filter(
+        models.ClueState.clue_id == clue_id,
+        models.ClueState.user_id == user_id
+    ).first()
 
     if clue_state:
         clue_state.interacted = True
@@ -33,12 +37,14 @@ def update_clue_state(clue_id: int, db: Session = Depends(get_db)):
 
 # 단서 조회 여부
 @app.get("/api/clues", response_model=schemas.ClueListResponse)
-def get_clues(db: Session = Depends(get_db)):
+def get_clues(user_id: Annotated[str, Header()], db: Session = Depends(get_db)):
 
-    clue_list = db.query(models.ClueState).all()
+    clue_list = db.query(models.ClueState).filter(
+        models.ClueState.user_id == user_id
+    ).all()
 
     response = [
-        schemas.ClueStateElement(clue_id = c.clue_id, interacted = c.interacted)
+        schemas.ClueStateElement(user_id=user_id, clue_id = c.clue_id, interacted = c.interacted)
         for c in clue_list
     ]
 
@@ -46,9 +52,12 @@ def get_clues(db: Session = Depends(get_db)):
 
 # 인물 조회처리
 @app.post("/api/character/{character_id}")
-def update_character_state(character_id: int, db: Session = Depends(get_db)):
+def update_character_state(user_id: Annotated[str, Header()], character_id: int, db: Session = Depends(get_db)):
 
-    character_state = db.query(models.CharacterState).filter(models.CharacterState.character_id == character_id).first()
+    character_state = db.query(models.CharacterState).filter(
+        models.CharacterState.character_id == character_id,
+        models.CharacterState.user_id == user_id
+    ).first()
 
     if character_state:
         character_state.interacted = True
@@ -60,12 +69,14 @@ def update_character_state(character_id: int, db: Session = Depends(get_db)):
 
 # 인물 조회 여부
 @app.get("/api/characters", response_model=schemas.CharacterListResponse)
-def get_characters(db: Session = Depends(get_db)):
-    character_list = db.query(models.CharacterState).all()
+def get_characters(user_id: Annotated[str, Header()], db: Session = Depends(get_db)):
+    character_list = db.query(models.CharacterState).filter(
+        models.CharacterState.user_id == user_id
+    ).all()
 
     # 명세서의 JSON 구조 {"characters": [...]} 형태로 변환 (characters_id 매칭)
     response_data = [
-        schemas.CharacterStateElement(characters_id=ch.character_id, interacted=ch.is_interacted)
+        schemas.CharacterStateElement(user_id=user_id, characters_id=ch.character_id, interacted=ch.is_interacted)
         for ch in character_list
     ]
 
@@ -73,11 +84,13 @@ def get_characters(db: Session = Depends(get_db)):
 
 # 인물 대화 불러오기
 @app.get("/api/characters/{character_id}/messages")
-def get_character_messages(character_id: int, db: Session = Depends(get_db)):
+def get_character_messages(user_id: Annotated[str, Header()], character_id: int, db: Session = Depends(get_db)):
 
     messages_from_db = (
         db.query(models.ChatMessage)
-        .filter(models.ChatMessage.character_id == character_id)
+        .filter(models.ChatMessage.character_id == character_id,
+                models.ChatMessage.sender == user_id
+            )
         .order_by(models.ChatMessage.createdAt.asc())
         .all()
     )
@@ -100,16 +113,17 @@ def get_character_messages(character_id: int, db: Session = Depends(get_db)):
 # 인물과 대화
 @app.post("/api/characters/{character_id}/messages", response_model=schemas.ChatMessageResponse)
 def create_character_message(
+    user_id: Annotated[str, Header()],
     character_id: int,
     payload: schemas.ChatMessageCreate,
     db: Session = Depends(get_db)
 ):
-    user_msg = models.ChatMessage(sender = "me", character_id = character_id, content=payload.content)
+    user_msg = models.ChatMessage(user_id=user_id, sender = "me", character_id = character_id, content=payload.content)
     db.add(user_msg)
 
     reply_content = "이 곳에는 LLM의 응답이 들어가게 됨."
 
-    system_msg = models.ChatMessage(sender = character_id, character_id = character_id, content = reply_content)
+    system_msg = models.ChatMessage(user_id=user_id, sender = character_id, character_id = character_id, content = reply_content)
     db.add(system_msg)
 
     db.commit()
