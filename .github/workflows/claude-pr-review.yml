@@ -46,4 +46,4 @@ jobs:
 
             Prioritize actionable bugs and risks. Leave inline comments only where a specific code location needs a change.
           claude_args: |
-            --max-turns 8
+            --max-turns 40
