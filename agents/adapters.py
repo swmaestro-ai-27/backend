@@ -45,6 +45,15 @@ def save_message(
     raise NotImplementedError("save_message adapter is not wired yet")
 
 
+def generate_character_reply(
+    prompt: str,
+    character: Dict[str, Any],
+    user_message: str,
+    context_clues: List[Dict[str, Any]],
+) -> str:
+    raise NotImplementedError("generate_character_reply adapter is not wired yet")
+
+
 def mark_clue_interacted(session_id: str, clue_id: int) -> None:
     raise NotImplementedError("mark_clue_interacted adapter is not wired yet")
 
@@ -55,4 +64,3 @@ def unlock_clue(session_id: str, clue_id: int) -> None:
 
 def unlock_character(session_id: str, character_id: int) -> None:
     raise NotImplementedError("unlock_character adapter is not wired yet")
-

@@ -27,6 +27,14 @@ def filter_context_clues(
     ]
 
 
+def filter_locked_clues(
+    clues: Iterable[Dict[str, Any]],
+    unlocked_ids: Set[int],
+) -> List[Dict[str, Any]]:
+    """Return clues that are not unlocked for the current session."""
+    return [clue for clue in clues if int(clue["id"]) not in unlocked_ids]
+
+
 def find_locked_clue_leaks(
     response: str,
     locked_clues: Iterable[Dict[str, Any]],
@@ -46,4 +54,3 @@ def find_locked_clue_leaks(
 
 def safe_response_for_spoiler_leak() -> str:
     return "지금 확인된 정보만으로는 그 부분을 단정할 수 없어."
-

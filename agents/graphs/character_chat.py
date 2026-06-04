@@ -5,17 +5,61 @@ on LangGraph yet; the public `invoke` shape is compatible with moving to a
 LangGraph implementation later.
 """
 
-from typing import Any, Dict
+from typing import Any, Callable, Dict, List
 
 from agents import adapters
-from agents.guard import filter_context_clues
+from agents.guard import (
+    filter_context_clues,
+    filter_locked_clues,
+    find_locked_clue_leaks,
+    safe_response_for_spoiler_leak,
+)
 from agents.prompts.templates import build_character_prompt
 from agents.types import CharacterChatState
 
 
 class CharacterChatGraph:
-    def __init__(self, adapter_module: Any = adapters) -> None:
+    def __init__(
+        self,
+        adapter_module: Any = adapters,
+        reply_generator: Callable[
+            [str, Dict[str, Any], str, List[Dict[str, Any]]],
+            str,
+        ] = None,
+    ) -> None:
         self.adapters = adapter_module
+        self.reply_generator = reply_generator
+
+    def _generate_reply(
+        self,
+        prompt: str,
+        character: Dict[str, Any],
+        user_message: str,
+        context_clues: List[Dict[str, Any]],
+        state: CharacterChatState,
+    ) -> str:
+        if state.get("llm_response"):
+            return state["llm_response"]
+        if self.reply_generator is not None:
+            return self.reply_generator(prompt, character, user_message, context_clues)
+        return self.adapters.generate_character_reply(
+            prompt,
+            character,
+            user_message,
+            context_clues,
+        )
+
+    @staticmethod
+    def _extract_used_clue_ids(
+        response: str,
+        context_clues: List[Dict[str, Any]],
+    ) -> List[int]:
+        used_clue_ids = []
+        for clue in context_clues:
+            clue_name = str(clue.get("name", "")).strip()
+            if clue_name and clue_name in response:
+                used_clue_ids.append(int(clue["id"]))
+        return used_clue_ids
 
     def invoke(self, state: CharacterChatState) -> Dict[str, Any]:
         session_id = state["session_id"]
@@ -32,6 +76,7 @@ class CharacterChatGraph:
             clues=accessible_clues,
             unlocked_ids=unlocked_clue_ids,
         )
+        locked_clues = filter_locked_clues(accessible_clues, unlocked_clue_ids)
         prompt = build_character_prompt(
             character=character,
             context_clues=context_clues,
@@ -46,8 +91,23 @@ class CharacterChatGraph:
             }
         )
 
-        # LLM integration belongs to the CharacterChatGraph implementation issue.
-        llm_response = state.get("llm_response") or "현재는 캐릭터 응답 생성기가 연결되지 않았습니다."
+        llm_response = self._generate_reply(
+            prompt,
+            character,
+            user_message,
+            context_clues,
+            state,
+        )
+        leaked_clues = find_locked_clue_leaks(llm_response, locked_clues)
+        if leaked_clues:
+            debug_trace.append(
+                {
+                    "step": "spoiler_guard_replaced_response",
+                    "leaked_clue_ids": [clue["id"] for clue in leaked_clues],
+                }
+            )
+            llm_response = safe_response_for_spoiler_leak()
+        used_clue_ids = self._extract_used_clue_ids(llm_response, context_clues)
 
         self.adapters.save_message(session_id, character_id, "me", user_message)
         self.adapters.save_message(
@@ -60,11 +120,10 @@ class CharacterChatGraph:
         return {
             "content": llm_response,
             "prompt": prompt,
-            "used_clue_ids": [],
+            "used_clue_ids": used_clue_ids,
             "suggested_questions": [],
             "debug_trace": debug_trace,
         }
 
 
 character_chat_graph = CharacterChatGraph()
-
