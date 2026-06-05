@@ -79,7 +79,7 @@ def test_get_clues_empty():
     assert response.json() == {"clues": []}
 
 def test_update_character_state():
-    response = client.post("/api/characters/1", headers={"user-id": "testuser"})
+    response = client.post("/api/character/1", headers={"user-id": "testuser"})
     assert response.status_code == 200
     assert response.json() == {"message": "Character 1 state updated successfully."}
 
@@ -90,7 +90,7 @@ def test_update_character_state():
     db.close()
 
 def test_get_characters():
-    client.post("/api/characters/1", headers={"user-id": "testuser"})
+    client.post("/api/character/1", headers={"user-id": "testuser"})
     response = client.get("/api/characters", headers={"user-id": "testuser"})
     assert response.status_code == 200
     data = response.json()
