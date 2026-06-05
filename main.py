@@ -2,6 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException, Request
 import models
 import schemas
 from agents.adapters import DatabaseAgentAdapter
+from agents.graphs.aria_clue_explain import AriaClueExplainGraph
 from agents.graphs.character_chat import AgentGenerationError, CharacterChatGraph
 from agents.graphs.deduction_evaluate import DeductionEvaluateGraph
 from database import SessionLocal, engine, migrate_sqlite_schema
@@ -40,6 +41,13 @@ def update_clue_state(
     user_id: str = Depends(get_user_id),
     db: Session = Depends(get_db),
 ):
+    adapter = DatabaseAgentAdapter(db, user_id=user_id)
+    try:
+        adapter.get_clue(clue_id)
+    except KeyError as exc:
+        db.rollback()
+        raise HTTPException(status_code=404, detail=f"Clue {clue_id} not found") from exc
+
     clue_state = (
         db.query(models.ClueState)
         .filter(models.ClueState.user_id == user_id)
@@ -54,6 +62,8 @@ def update_clue_state(
         db.add(clue_state)
         db.flush()
 
+    graph = AriaClueExplainGraph(adapter)
+    graph.invoke({"user_id": user_id, "clue_id": clue_id})
     db.commit()
     return {"message": f"Clue {clue_id} state updated successfully."}
 
@@ -89,6 +99,15 @@ def update_character_state(
     user_id: str = Depends(get_user_id),
     db: Session = Depends(get_db),
 ):
+    adapter = DatabaseAgentAdapter(db, user_id=user_id)
+    try:
+        adapter.get_character(character_id)
+    except KeyError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Character {character_id} not found",
+        ) from exc
+
     character_state = (
         db.query(models.CharacterState)
         .filter(models.CharacterState.user_id == user_id)
@@ -184,6 +203,12 @@ def create_character_message(
                 "user_message": payload.content,
             }
         )
+    except KeyError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=404,
+            detail=f"Character {character_id} not found",
+        ) from exc
     except AgentGenerationError as exc:
         db.commit()
         raise HTTPException(status_code=502, detail=str(exc)) from exc
