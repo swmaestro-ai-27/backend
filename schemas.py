@@ -22,7 +22,7 @@ class ClueListResponse(BaseModel):
 # GET /api/characters 응답 내부의 개별 인물 객체
 class CharacterStateElement(BaseModel):
     user_id: str
-    characters_id: int  # 명세의 "characters_id" 반영
+    character_id: int
     interacted: bool
 
     class Config:

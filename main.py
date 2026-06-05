@@ -29,7 +29,7 @@ def update_clue_state(user_id: Annotated[str, Header()], clue_id: int, db: Sessi
     if clue_state:
         clue_state.interacted = True
     else:
-        clue_state = models.ClueState(clue_id = clue_id, interacted = True)
+        clue_state = models.ClueState(clue_id = clue_id, user_id = user_id, interacted = True)
         db.add(clue_state)
 
     db.commit()
@@ -62,7 +62,8 @@ def update_character_state(user_id: Annotated[str, Header()], character_id: int,
     if character_state:
         character_state.interacted = True
     else:
-        character_state = models.CharacterState(character_id = character_id, interacted = True)
+        character_state = models.CharacterState(user_id = user_id, character_id = character_id, interacted = True)
+        db.add(character_state)
 
     db.commit()
     return {"message": f"Character {character_id} state updated successfully."}
@@ -76,7 +77,7 @@ def get_characters(user_id: Annotated[str, Header()], db: Session = Depends(get_
 
     # 명세서의 JSON 구조 {"characters": [...]} 형태로 변환 (characters_id 매칭)
     response_data = [
-        schemas.CharacterStateElement(user_id=user_id, characters_id=ch.character_id, interacted=ch.is_interacted)
+        schemas.CharacterStateElement(user_id=user_id, character_id=ch.character_id, interacted=ch.interacted)
         for ch in character_list
     ]
 
@@ -89,18 +90,19 @@ def get_character_messages(user_id: Annotated[str, Header()], character_id: int,
     messages_from_db = (
         db.query(models.ChatMessage)
         .filter(models.ChatMessage.character_id == character_id,
-                models.ChatMessage.sender == user_id
+                models.ChatMessage.user_id == user_id
             )
-        .order_by(models.ChatMessage.createdAt.asc())
+        .order_by(models.ChatMessage.created_at.asc())
         .all()
     )
 
     response_messages = [
         schemas.ChatMessageElement(
             id=m.id,
+            user_id=user_id,
             sender=m.sender,
             content=m.content,
-            created_at=m.createdAt
+            created_at=m.created_at
         )
         for m in messages_from_db
     ]
@@ -123,10 +125,12 @@ def create_character_message(
 
     reply_content = "이 곳에는 LLM의 응답이 들어가게 됨."
 
-    system_msg = models.ChatMessage(user_id=user_id, sender = character_id, character_id = character_id, content = reply_content)
+    system_msg = models.ChatMessage(user_id=user_id, sender = str(character_id), character_id = character_id, content = reply_content)
     db.add(system_msg)
 
     db.commit()
+
+    db.refresh(system_msg)
 
     return schemas.ChatMessageResponse(
         character_id = character_id,
