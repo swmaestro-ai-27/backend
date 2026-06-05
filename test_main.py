@@ -32,7 +32,9 @@ def setup_and_teardown_db(monkeypatch):
     monkeypatch.setattr(
         DatabaseAgentAdapter,
         "generate_character_reply",
-        lambda self, prompt: "이 곳에는 LLM의 응답이 들어가게 됨.",
+        lambda self, prompt, character, user_message, context_clues: (
+            "이 곳에는 LLM의 응답이 들어가게 됨."
+        ),
     )
     models.Base.metadata.create_all(bind=engine)
     yield

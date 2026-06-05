@@ -3,13 +3,14 @@ import models
 import schemas
 from agents.adapters import DatabaseAgentAdapter
 from agents.graphs.aria_clue_explain import AriaClueExplainGraph
-from agents.graphs.character_chat import CharacterChatGraph
+from agents.graphs.character_chat import AgentGenerationError, CharacterChatGraph
 from agents.graphs.deduction_evaluate import DeductionEvaluateGraph
-from database import SessionLocal, engine
+from database import SessionLocal, engine, migrate_sqlite_schema
 from sqlalchemy.orm import Session
 
 
 models.Base.metadata.create_all(bind=engine)
+migrate_sqlite_schema(engine)
 
 app = FastAPI()
 
@@ -23,9 +24,13 @@ def get_db():
 
 
 def get_user_id(request: Request) -> str:
-    user_id = request.headers.get("user_id") or request.headers.get("user-id")
+    user_id = (
+        request.headers.get("x-user-id")
+        or request.headers.get("user-id")
+        or request.headers.get("user_id")
+    )
     if not user_id:
-        raise HTTPException(status_code=422, detail="user_id header is required")
+        raise HTTPException(status_code=422, detail="X-User-Id header is required")
     return user_id
 
 
@@ -175,13 +180,17 @@ def create_character_message(
 ):
     adapter = DatabaseAgentAdapter(db, user_id=user_id)
     graph = CharacterChatGraph(adapter)
-    result = graph.invoke(
-        {
-            "user_id": user_id,
-            "character_id": character_id,
-            "user_message": payload.content,
-        }
-    )
+    try:
+        result = graph.invoke(
+            {
+                "user_id": user_id,
+                "character_id": character_id,
+                "user_message": payload.content,
+            }
+        )
+    except AgentGenerationError as exc:
+        db.commit()
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
     db.commit()
 
     return schemas.ChatMessageResponse(

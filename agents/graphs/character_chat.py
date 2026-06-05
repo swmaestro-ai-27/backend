@@ -18,6 +18,10 @@ from agents.prompts.templates import build_character_prompt
 from agents.types import CharacterChatState
 
 
+class AgentGenerationError(RuntimeError):
+    """Raised when an external model call fails after the user turn is saved."""
+
+
 class CharacterChatGraph:
     def __init__(
         self,
@@ -91,13 +95,20 @@ class CharacterChatGraph:
             }
         )
 
-        llm_response = self._generate_reply(
-            prompt,
-            character,
-            user_message,
-            context_clues,
-            state,
-        )
+        self.adapters.save_message(user_id, character_id, "me", user_message)
+
+        try:
+            llm_response = self._generate_reply(
+                prompt,
+                character,
+                user_message,
+                context_clues,
+                state,
+            )
+        except Exception as exc:
+            debug_trace.append({"step": "llm_generation_failed"})
+            raise AgentGenerationError("character reply generation failed") from exc
+
         leaked_clues = find_locked_clue_leaks(llm_response, locked_clues)
         if leaked_clues:
             debug_trace.append(
@@ -109,7 +120,6 @@ class CharacterChatGraph:
             llm_response = safe_response_for_spoiler_leak()
         used_clue_ids = self._extract_used_clue_ids(llm_response, context_clues)
 
-        self.adapters.save_message(user_id, character_id, "me", user_message)
         self.adapters.save_message(
             user_id,
             character_id,
