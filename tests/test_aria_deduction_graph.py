@@ -74,6 +74,12 @@ class ContradictingCommentAdapter(FakeAdapter):
         return "분석 결과, 당신의 추론은 정확합니다."
 
 
+class NaturalIncorrectCommentAdapter(FakeAdapter):
+    @classmethod
+    def generate_deduction_comment(cls, prompt, result, failure_reason=None):
+        return "당신의 추론은 정확하지 않습니다."
+
+
 class AriaDeductionGraphTest(unittest.TestCase):
     def setUp(self):
         FakeAdapter.unlocked_clue_ids = {1, 5, 6, 7}
@@ -222,6 +228,23 @@ class AriaDeductionGraphTest(unittest.TestCase):
             result["debug_trace"][-1]["comment_source"],
             "fallback_contradiction",
         )
+
+    def test_deduction_comment_keeps_natural_incorrect_phrase(self):
+        FakeAdapter.unlocked_clue_ids = {1, 2, 5, 6, 7}
+        graph = DeductionEvaluateGraph(NaturalIncorrectCommentAdapter)
+
+        result = graph.invoke(
+            {
+                "user_id": "user-1",
+                "content": "민재는 범인이 아니다.",
+                "selected_target_id": 1,
+                "selected_clue_ids": [1, 2],
+            }
+        )
+
+        self.assertFalse(result["result"])
+        self.assertEqual(result["comment"], "당신의 추론은 정확하지 않습니다.")
+        self.assertEqual(result["debug_trace"][-1]["comment_source"], "llm")
 
 
 if __name__ == "__main__":

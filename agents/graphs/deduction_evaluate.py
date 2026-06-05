@@ -62,7 +62,8 @@ def comment_contradicts_result(comment: str, result: bool) -> bool:
         "타당하지",
     )
     correct_markers = (
-        "정확",
+        "정확합니다",
+        "정확한",
         "일치합니다",
         "맞습니다",
         "올바른",

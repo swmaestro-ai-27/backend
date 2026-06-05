@@ -81,8 +81,15 @@ def test_update_unknown_clue_returns_404():
     assert response.status_code == 404
     assert response.json()["detail"] == "Clue 999 not found"
 
+def test_update_locked_clue_returns_403():
+    response = client.post("/api/clues/3", headers={"user-id": "testuser"})
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Clue 3 is locked"
+
 def test_get_clues():
     client.post("/api/clues/1", headers={"user-id": "testuser"})
+    client.post("/api/character/1", headers={"user-id": "testuser"})
     client.post("/api/clues/2", headers={"user-id": "testuser"})
 
     response = client.get("/api/clues", headers={"user-id": "testuser"})
@@ -108,6 +115,9 @@ def test_update_character_state():
     char_state = db.query(models.CharacterState).filter_by(user_id="testuser", character_id=1).first()
     assert char_state is not None
     assert char_state.interacted is True
+    clue_state = db.query(models.ClueState).filter_by(user_id="testuser", clue_id=2).first()
+    assert clue_state is not None
+    assert clue_state.interacted is True
     db.close()
 
 def test_update_unknown_character_returns_404():
