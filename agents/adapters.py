@@ -185,6 +185,14 @@ class DatabaseAgentAdapter:
     ) -> str:
         return _upstage_chat_completion(prompt)
 
+    def generate_deduction_comment(
+        self,
+        prompt: str,
+        result: bool,
+        failure_reason: str = None,
+    ) -> str:
+        return _upstage_chat_completion(prompt)
+
 
 def get_character(character_id: int) -> Dict[str, Any]:
     return get_character_by_id(character_id)
@@ -232,6 +240,14 @@ def generate_character_reply(
     character: Dict[str, Any],
     user_message: str,
     context_clues: List[Dict[str, Any]],
+) -> str:
+    return _upstage_chat_completion(prompt)
+
+
+def generate_deduction_comment(
+    prompt: str,
+    result: bool,
+    failure_reason: str = None,
 ) -> str:
     return _upstage_chat_completion(prompt)
 

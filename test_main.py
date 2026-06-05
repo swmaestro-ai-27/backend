@@ -36,6 +36,13 @@ def setup_and_teardown_db(monkeypatch):
             "이 곳에는 LLM의 응답이 들어가게 됨."
         ),
     )
+    monkeypatch.setattr(
+        DatabaseAgentAdapter,
+        "generate_deduction_comment",
+        lambda self, prompt, result, failure_reason=None: (
+            "ARIA API 정답 코멘트" if result else "ARIA API 오답 코멘트"
+        ),
+    )
     models.Base.metadata.create_all(bind=engine)
     yield
     models.Base.metadata.drop_all(bind=engine)
@@ -173,3 +180,4 @@ def test_submit_deduction():
     assert "comment" in data
     assert "result" in data
     assert data["result"] is False
+    assert data["comment"] == "ARIA API 오답 코멘트"
