@@ -2,6 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from agents.adapters import DatabaseAgentAdapter
 from main import app, get_db
 import models
 
@@ -27,7 +28,14 @@ client = TestClient(app)
 
 # 각 테스트 실행 전후로 데이터베이스 테이블 생성 및 삭제
 @pytest.fixture(scope="function", autouse=True)
-def setup_and_teardown_db():
+def setup_and_teardown_db(monkeypatch):
+    monkeypatch.setattr(
+        DatabaseAgentAdapter,
+        "generate_character_reply",
+        lambda self, prompt, character, user_message, context_clues: (
+            "이 곳에는 LLM의 응답이 들어가게 됨."
+        ),
+    )
     models.Base.metadata.create_all(bind=engine)
     yield
     models.Base.metadata.drop_all(bind=engine)
@@ -117,7 +125,7 @@ def test_create_and_get_character_messages():
     assert len(data_get["messages"]) == 2
     assert data_get["messages"][0]["sender"] == "me"
     assert data_get["messages"][0]["content"] == "Hello"
-    assert data_get["messages"][1]["sender"] == "1"
+    assert data_get["messages"][1]["sender"] == "민재"
 
 def test_submit_deduction():
     payload = {
@@ -125,7 +133,11 @@ def test_submit_deduction():
         "character": 1,
         "clues": [1, 2, 3]
     }
-    response = client.post("/api/deductions", json=payload)
+    response = client.post(
+        "/api/deductions",
+        headers={"user-id": "testuser"},
+        json=payload,
+    )
     assert response.status_code == 200
     data = response.json()
     assert "comment" in data

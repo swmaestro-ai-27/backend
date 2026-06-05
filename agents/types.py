@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional, Set, TypedDict
 
 
 class CharacterChatState(TypedDict, total=False):
-    session_id: str
+    user_id: str
     character_id: int
     user_message: str
     character: Optional[Dict[str, Any]]
@@ -21,7 +21,7 @@ class CharacterChatState(TypedDict, total=False):
 
 
 class AriaClueExplainState(TypedDict, total=False):
-    session_id: str
+    user_id: str
     clue_id: int
     clue: Optional[Dict[str, Any]]
     is_unlocked: bool
@@ -33,7 +33,7 @@ class AriaClueExplainState(TypedDict, total=False):
 
 
 class DeductionEvaluateState(TypedDict, total=False):
-    session_id: str
+    user_id: str
     content: str
     selected_target_id: int
     selected_clue_ids: List[int]
@@ -42,4 +42,3 @@ class DeductionEvaluateState(TypedDict, total=False):
     failure_reason: Optional[str]
     comment: str
     debug_trace: List[Dict[str, Any]]
-

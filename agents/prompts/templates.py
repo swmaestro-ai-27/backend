@@ -15,8 +15,8 @@ CHARACTER_BEHAVIOR_RULES = """- 반드시 해당 캐릭터의 입장에서 답�
 def _format_items(items: Iterable[Dict[str, Any]]) -> str:
     formatted = []
     for item in items:
-        name = item.get("name", "")
-        description = item.get("description", "")
+        name = item.get("name", item.get("sender", ""))
+        description = item.get("description", item.get("content", ""))
         formatted.append(f"- {name}: {description}")
     return "\n".join(formatted) if formatted else "- 없음"
 
@@ -49,4 +49,3 @@ def build_character_prompt(
 [사용자 질문]
 {user_message}
 """
-

@@ -19,12 +19,12 @@ class DeductionEvaluateGraph:
         self.adapters = adapter_module
 
     def invoke(self, state: DeductionEvaluateState) -> Dict[str, Any]:
-        session_id = state["session_id"]
+        user_id = state["user_id"]
         selected_target_id = int(state["selected_target_id"])
         selected_clue_ids = [int(clue_id) for clue_id in state["selected_clue_ids"]]
         debug_trace = list(state.get("debug_trace", []))
 
-        unlocked_clue_ids: Set[int] = self.adapters.get_unlocked_clue_ids(session_id)
+        unlocked_clue_ids: Set[int] = self.adapters.get_unlocked_clue_ids(user_id)
         is_correct = evaluate_deduction(selected_target_id, selected_clue_ids)
         failure_reason = None if is_correct else "incorrect_target_or_evidence"
         comment = (
@@ -51,4 +51,3 @@ class DeductionEvaluateGraph:
 
 
 deduction_evaluate_graph = DeductionEvaluateGraph()
-
