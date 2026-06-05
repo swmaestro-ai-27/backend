@@ -133,6 +133,49 @@ class DatabaseAgentAdapter:
             )
         )
 
+    def mark_clue_interacted(self, user_id: str, clue_id: int) -> None:
+        import models
+
+        clue_state = (
+            self.db.query(models.ClueState)
+            .filter(models.ClueState.user_id == user_id)
+            .filter(models.ClueState.clue_id == clue_id)
+            .first()
+        )
+        if clue_state:
+            clue_state.interacted = True
+            return
+        self.db.add(
+            models.ClueState(
+                user_id=user_id,
+                clue_id=clue_id,
+                interacted=True,
+            )
+        )
+
+    def unlock_clue(self, user_id: str, clue_id: int) -> None:
+        self.mark_clue_interacted(user_id, clue_id)
+
+    def unlock_character(self, user_id: str, character_id: int) -> None:
+        import models
+
+        character_state = (
+            self.db.query(models.CharacterState)
+            .filter(models.CharacterState.user_id == user_id)
+            .filter(models.CharacterState.character_id == character_id)
+            .first()
+        )
+        if character_state:
+            character_state.interacted = True
+            return
+        self.db.add(
+            models.CharacterState(
+                user_id=user_id,
+                character_id=character_id,
+                interacted=True,
+            )
+        )
+
     def generate_character_reply(
         self,
         prompt: str,

@@ -25,8 +25,18 @@ class DeductionEvaluateGraph:
         debug_trace = list(state.get("debug_trace", []))
 
         unlocked_clue_ids: Set[int] = self.adapters.get_unlocked_clue_ids(user_id)
-        is_correct = evaluate_deduction(selected_target_id, selected_clue_ids)
-        failure_reason = None if is_correct else "incorrect_target_or_evidence"
+        submitted = {int(clue_id) for clue_id in selected_clue_ids}
+        locked_submitted = sorted(submitted - unlocked_clue_ids)
+        is_correct = (
+            not locked_submitted
+            and evaluate_deduction(selected_target_id, selected_clue_ids)
+        )
+        if is_correct:
+            failure_reason = None
+        elif locked_submitted:
+            failure_reason = "locked_clue_submitted"
+        else:
+            failure_reason = "incorrect_target_or_evidence"
         comment = (
             "분석 결과, 당신의 추론은 높은 정확도를 보입니다. ...예상보다 빠르군요."
             if is_correct
@@ -38,6 +48,7 @@ class DeductionEvaluateGraph:
                 "selected_target_id": selected_target_id,
                 "selected_clue_ids": selected_clue_ids,
                 "unlocked_clue_ids": sorted(unlocked_clue_ids),
+                "locked_submitted_clue_ids": locked_submitted,
                 "result": is_correct,
             }
         )

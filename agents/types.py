@@ -1,6 +1,6 @@
 """Typed graph state definitions for agent MVP flows."""
 
-from typing import Any, Dict, List, Optional, Set, TypedDict
+from typing import Any, Dict, List, Literal, Optional, Set, TypedDict
 
 
 class CharacterChatState(TypedDict, total=False):
@@ -42,3 +42,15 @@ class DeductionEvaluateState(TypedDict, total=False):
     failure_reason: Optional[str]
     comment: str
     debug_trace: List[Dict[str, Any]]
+
+
+class ProgressUnlockInput(TypedDict, total=False):
+    user_id: str
+    source_type: Literal["clue", "character"]
+    source_id: int
+    next_unlock: Optional[Dict[str, Any]]
+
+
+class ProgressUnlockResult(TypedDict, total=False):
+    unlocked_target: Optional[Dict[str, Any]]
+    error: Optional[str]

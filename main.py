@@ -3,7 +3,9 @@ from pydantic import BaseModel
 import models
 import schemas
 from agents.adapters import DatabaseAgentAdapter
+from agents.graphs.aria_clue_explain import AriaClueExplainGraph
 from agents.graphs.character_chat import CharacterChatGraph
+from agents.graphs.deduction_evaluate import DeductionEvaluateGraph
 from database import SessionLocal, engine
 from sqlalchemy.orm import Session
 
@@ -42,7 +44,11 @@ def update_clue_state(
     else:
         clue_state = models.ClueState(user_id=user_id, clue_id=clue_id, interacted=True)
         db.add(clue_state)
+        db.flush()
 
+    adapter = DatabaseAgentAdapter(db, user_id=user_id)
+    graph = AriaClueExplainGraph(adapter)
+    graph.invoke({"user_id": user_id, "clue_id": clue_id})
     db.commit()
     return {"message": f"Clue {clue_id} state updated successfully."}
 
@@ -171,15 +177,22 @@ def create_character_message(
     )
 
 @app.post("/api/deductions", response_model = schemas.DeductionResponse)
-def submit_deduction(payload: schemas.DeductionRequest):
-
-    is_correct = False
-    comment_msg = "틀렸음"
-
-    # 추리 성공 조건
-
-
+def submit_deduction(
+    payload: schemas.DeductionRequest,
+    user_id: str = Depends(get_user_id),
+    db: Session = Depends(get_db),
+):
+    adapter = DatabaseAgentAdapter(db, user_id=user_id)
+    graph = DeductionEvaluateGraph(adapter)
+    result = graph.invoke(
+        {
+            "user_id": user_id,
+            "content": payload.content,
+            "selected_target_id": payload.character,
+            "selected_clue_ids": payload.clues,
+        }
+    )
     return schemas.DeductionResponse(
-        comment = comment_msg,
-        result = is_correct
+        comment=result["comment"],
+        result=result["result"],
     )
