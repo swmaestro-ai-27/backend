@@ -62,15 +62,15 @@ class CharacterChatGraph:
         return used_clue_ids
 
     def invoke(self, state: CharacterChatState) -> Dict[str, Any]:
-        session_id = state["session_id"]
+        user_id = state["user_id"]
         character_id = int(state["character_id"])
         user_message = state["user_message"]
         debug_trace = list(state.get("debug_trace", []))
 
         character = self.adapters.get_character(character_id)
-        recent_messages = self.adapters.get_recent_messages(session_id, character_id)
+        recent_messages = self.adapters.get_recent_messages(user_id, character_id)
         accessible_clues = self.adapters.get_accessible_clues(character_id)
-        unlocked_clue_ids = self.adapters.get_unlocked_clue_ids(session_id)
+        unlocked_clue_ids = self.adapters.get_unlocked_clue_ids(user_id)
         context_clues = filter_context_clues(
             character_id=character_id,
             clues=accessible_clues,
@@ -109,9 +109,9 @@ class CharacterChatGraph:
             llm_response = safe_response_for_spoiler_leak()
         used_clue_ids = self._extract_used_clue_ids(llm_response, context_clues)
 
-        self.adapters.save_message(session_id, character_id, "me", user_message)
+        self.adapters.save_message(user_id, character_id, "me", user_message)
         self.adapters.save_message(
-            session_id,
+            user_id,
             character_id,
             str(character.get("name", character_id)),
             llm_response,

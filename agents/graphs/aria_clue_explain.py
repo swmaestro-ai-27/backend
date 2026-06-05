@@ -11,12 +11,12 @@ class AriaClueExplainGraph:
         self.adapters = adapter_module
 
     def invoke(self, state: AriaClueExplainState) -> Dict[str, Any]:
-        session_id = state["session_id"]
+        user_id = state["user_id"]
         clue_id = int(state["clue_id"])
         debug_trace = list(state.get("debug_trace", []))
 
         clue = self.adapters.get_clue(clue_id)
-        is_unlocked = self.adapters.is_clue_unlocked(session_id, clue_id)
+        is_unlocked = self.adapters.is_clue_unlocked(user_id, clue_id)
         if not is_unlocked:
             return {
                 "explanation": "",
@@ -26,7 +26,7 @@ class AriaClueExplainGraph:
 
         aria_scripts = clue.get("aria_scripts") or clue.get("ariaScripts") or []
         explanation = "\n".join(str(script) for script in aria_scripts)
-        self.adapters.mark_clue_interacted(session_id, clue_id)
+        self.adapters.mark_clue_interacted(user_id, clue_id)
         debug_trace.append({"step": "build_aria_explanation", "clue_id": clue_id})
 
         return {
@@ -37,4 +37,3 @@ class AriaClueExplainGraph:
 
 
 aria_clue_explain_graph = AriaClueExplainGraph()
-

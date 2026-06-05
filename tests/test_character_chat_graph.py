@@ -35,7 +35,7 @@ class FakeAdapter:
         return FakeAdapter.characters[character_id]
 
     @staticmethod
-    def get_recent_messages(session_id, character_id, limit=6):
+    def get_recent_messages(user_id, character_id, limit=6):
         return [{"sender": "me", "content": "뭐가 이상했어?"}]
 
     @staticmethod
@@ -62,14 +62,14 @@ class FakeAdapter:
         ]
 
     @staticmethod
-    def get_unlocked_clue_ids(session_id):
+    def get_unlocked_clue_ids(user_id):
         return {1, 3}
 
     @classmethod
-    def save_message(cls, session_id, character_id, sender, content):
+    def save_message(cls, user_id, character_id, sender, content):
         cls.saved_messages.append(
             {
-                "session_id": session_id,
+                "user_id": user_id,
                 "character_id": character_id,
                 "sender": sender,
                 "content": content,
@@ -97,7 +97,7 @@ class CharacterChatGraphTest(unittest.TestCase):
 
         result = graph.invoke(
             {
-                "session_id": "session-1",
+                "user_id": "test-user",
                 "character_id": 1,
                 "user_message": "잠금 기록은 어떻게 봐?",
             }
@@ -123,7 +123,7 @@ class CharacterChatGraphTest(unittest.TestCase):
 
         result = graph.invoke(
             {
-                "session_id": "session-1",
+                "user_id": "test-user",
                 "character_id": 1,
                 "user_message": "대답해줘",
             }
@@ -137,7 +137,7 @@ class CharacterChatGraphTest(unittest.TestCase):
         for character_id, character in FakeAdapter.characters.items():
             result = graph.invoke(
                 {
-                    "session_id": "session-1",
+                    "user_id": "test-user",
                     "character_id": character_id,
                     "user_message": "너는 어떻게 봐?",
                 }
@@ -156,7 +156,7 @@ class CharacterChatGraphTest(unittest.TestCase):
 
         result = graph.invoke(
             {
-                "session_id": "session-1",
+                "user_id": "test-user",
                 "character_id": 1,
                 "user_message": "숨겨진 단서는?",
             }

@@ -15,7 +15,7 @@ from data.characters import get_character_by_id
 from data.clues import CLUES, get_clue_by_id
 
 
-DEFAULT_SESSION_ID = "default"
+DEFAULT_USER_ID = "default"
 DEFAULT_UNLOCKED_CLUE_IDS = {1}
 
 
@@ -62,9 +62,9 @@ def _upstage_chat_completion(prompt: str) -> str:
 class DatabaseAgentAdapter:
     """DB-backed adapter for sync FastAPI endpoints."""
 
-    def __init__(self, db: Any, session_id: str = DEFAULT_SESSION_ID) -> None:
+    def __init__(self, db: Any, user_id: str = DEFAULT_USER_ID) -> None:
         self.db = db
-        self.session_id = session_id
+        self.user_id = user_id
 
     def get_character(self, character_id: int) -> Dict[str, Any]:
         return get_character_by_id(character_id)
@@ -79,24 +79,24 @@ class DatabaseAgentAdapter:
             if character_id in clue.get("accessible_character_ids", [])
         ]
 
-    def get_unlocked_clue_ids(self, session_id: str) -> Set[int]:
+    def get_unlocked_clue_ids(self, user_id: str) -> Set[int]:
         import models
 
         interacted_ids = {
             clue_id
             for (clue_id,) in self.db.query(models.ClueState.clue_id)
-            .filter(models.ClueState.user_id == session_id)
+            .filter(models.ClueState.user_id == user_id)
             .filter(models.ClueState.interacted == True)  # noqa: E712
             .all()
         }
         return DEFAULT_UNLOCKED_CLUE_IDS | {int(clue_id) for clue_id in interacted_ids}
 
-    def is_clue_unlocked(self, session_id: str, clue_id: int) -> bool:
-        return clue_id in self.get_unlocked_clue_ids(session_id)
+    def is_clue_unlocked(self, user_id: str, clue_id: int) -> bool:
+        return clue_id in self.get_unlocked_clue_ids(user_id)
 
     def get_recent_messages(
         self,
-        session_id: str,
+        user_id: str,
         character_id: int,
         limit: int = 6,
     ) -> List[Dict[str, Any]]:
@@ -104,7 +104,7 @@ class DatabaseAgentAdapter:
 
         messages = (
             self.db.query(models.ChatMessage)
-            .filter(models.ChatMessage.user_id == session_id)
+            .filter(models.ChatMessage.user_id == user_id)
             .filter(models.ChatMessage.character_id == character_id)
             .order_by(models.ChatMessage.created_at.desc())
             .limit(limit)
@@ -117,7 +117,7 @@ class DatabaseAgentAdapter:
 
     def save_message(
         self,
-        session_id: str,
+        user_id: str,
         character_id: int,
         sender: str,
         content: str,
@@ -126,7 +126,7 @@ class DatabaseAgentAdapter:
 
         self.db.add(
             models.ChatMessage(
-                user_id=session_id,
+                user_id=user_id,
                 sender=sender,
                 character_id=character_id,
                 content=content,
@@ -159,16 +159,16 @@ def get_accessible_clues(character_id: int) -> List[Dict[str, Any]]:
     ]
 
 
-def get_unlocked_clue_ids(session_id: str) -> Set[int]:
+def get_unlocked_clue_ids(user_id: str) -> Set[int]:
     raise NotImplementedError("get_unlocked_clue_ids adapter is not wired yet")
 
 
-def is_clue_unlocked(session_id: str, clue_id: int) -> bool:
-    return clue_id in get_unlocked_clue_ids(session_id)
+def is_clue_unlocked(user_id: str, clue_id: int) -> bool:
+    return clue_id in get_unlocked_clue_ids(user_id)
 
 
 def get_recent_messages(
-    session_id: str,
+    user_id: str,
     character_id: int,
     limit: int = 6,
 ) -> List[Dict[str, Any]]:
@@ -176,7 +176,7 @@ def get_recent_messages(
 
 
 def save_message(
-    session_id: str,
+    user_id: str,
     character_id: int,
     sender: str,
     content: str,
@@ -193,13 +193,13 @@ def generate_character_reply(
     return _upstage_chat_completion(prompt)
 
 
-def mark_clue_interacted(session_id: str, clue_id: int) -> None:
+def mark_clue_interacted(user_id: str, clue_id: int) -> None:
     raise NotImplementedError("mark_clue_interacted adapter is not wired yet")
 
 
-def unlock_clue(session_id: str, clue_id: int) -> None:
+def unlock_clue(user_id: str, clue_id: int) -> None:
     raise NotImplementedError("unlock_clue adapter is not wired yet")
 
 
-def unlock_character(session_id: str, character_id: int) -> None:
+def unlock_character(user_id: str, character_id: int) -> None:
     raise NotImplementedError("unlock_character adapter is not wired yet")

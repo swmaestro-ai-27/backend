@@ -154,11 +154,11 @@ def create_character_message(
     user_id: str = Depends(get_user_id),
     db: Session = Depends(get_db)
 ):
-    adapter = DatabaseAgentAdapter(db, session_id=user_id)
+    adapter = DatabaseAgentAdapter(db, user_id=user_id)
     graph = CharacterChatGraph(adapter)
     result = graph.invoke(
         {
-            "session_id": user_id,
+            "user_id": user_id,
             "character_id": character_id,
             "user_message": payload.content,
         }

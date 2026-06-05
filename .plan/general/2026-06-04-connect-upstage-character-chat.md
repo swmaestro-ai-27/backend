@@ -18,7 +18,7 @@
 ## Context / Constraints
 
 - 현재 API와 SQLAlchemy session은 동기 방식이다.
-- 현재 DB 모델에는 `session_id`, `unlocked`가 없다.
+- 현재 DB 모델에는 `unlocked`가 없다.
 - `.env`는 gitignore에 포함되어 있으며, 키 값은 출력하지 않는다.
 - Upstage 호출은 표준 라이브러리 HTTP client로 구현한다.
 
