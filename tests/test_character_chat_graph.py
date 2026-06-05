@@ -1,6 +1,7 @@
 import unittest
 
 from agents.graphs.character_chat import CharacterChatGraph
+from agents.graphs.character_chat import AgentGenerationError
 from agents.guard import filter_context_clues
 
 
@@ -166,6 +167,30 @@ class CharacterChatGraphTest(unittest.TestCase):
         self.assertIn(
             "spoiler_guard_replaced_response",
             [entry["step"] for entry in result["debug_trace"]],
+        )
+
+    def test_llm_failure_keeps_user_message(self):
+        graph = CharacterChatGraph(
+            FakeAdapter,
+            reply_generator=lambda prompt, character, user_message, context_clues: (
+                (_ for _ in ()).throw(RuntimeError("llm failed"))
+            ),
+        )
+
+        with self.assertRaises(AgentGenerationError):
+            graph.invoke(
+                {
+                    "user_id": "test-user",
+                    "character_id": 1,
+                    "user_message": "이 메시지는 저장돼야 해",
+                }
+            )
+
+        self.assertEqual(len(FakeAdapter.saved_messages), 1)
+        self.assertEqual(FakeAdapter.saved_messages[0]["sender"], "me")
+        self.assertEqual(
+            FakeAdapter.saved_messages[0]["content"],
+            "이 메시지는 저장돼야 해",
         )
 
 
