@@ -32,5 +32,6 @@ env/
 .DS_Store
 Thumbs.db
 
-sql_app.db
-test.db
+# SQLite 데이터베이스 파일 제외
+*.db
+*.sqlite3

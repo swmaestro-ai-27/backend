@@ -1,4 +1,7 @@
+import os
+from dotenv import load_dotenv
 from fastapi import FastAPI, Depends, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 import models
 import schemas
 from agents.adapters import DatabaseAgentAdapter
@@ -7,11 +10,28 @@ from agents.graphs.deduction_evaluate import DeductionEvaluateGraph
 from database import SessionLocal, engine, migrate_sqlite_schema
 from sqlalchemy.orm import Session
 
+# .env 파일의 환경 변수를 로드합니다.
+load_dotenv()
 
 models.Base.metadata.create_all(bind=engine)
 migrate_sqlite_schema(engine)
 
 app = FastAPI()
+
+# CORS 미들웨어를 추가합니다.
+origins = [
+    # .env 파일에서 클라이언트 주소를 읽어옵니다.
+    # 값이 없으면 "http://localhost:3000"을 기본값으로 사용합니다.
+    os.environ.get("CLIENT_ORIGIN_URL", "http://localhost:3000")
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],  # 모든 HTTP 메소드를 허용합니다.
+    allow_headers=["*"],  # 모든 HTTP 헤더를 허용합니다.
+)
 
 
 def get_db():
