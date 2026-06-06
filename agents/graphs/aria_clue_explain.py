@@ -31,7 +31,6 @@ class AriaClueExplainGraph:
 
         return {
             "explanation": explanation,
-            "next_unlock": clue.get("next_unlock") or clue.get("nextUnlock"),
             "debug_trace": debug_trace,
         }
 

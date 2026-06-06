@@ -33,3 +33,4 @@ env/
 Thumbs.db
 
 sql_app.db
+test.db

@@ -133,6 +133,26 @@ class DatabaseAgentAdapter:
             )
         )
 
+    def mark_clue_interacted(self, user_id: str, clue_id: int) -> None:
+        import models
+
+        clue_state = (
+            self.db.query(models.ClueState)
+            .filter(models.ClueState.user_id == user_id)
+            .filter(models.ClueState.clue_id == clue_id)
+            .first()
+        )
+        if clue_state:
+            clue_state.interacted = True
+            return
+        self.db.add(
+            models.ClueState(
+                user_id=user_id,
+                clue_id=clue_id,
+                interacted=True,
+            )
+        )
+
     def generate_character_reply(
         self,
         prompt: str,
@@ -140,6 +160,9 @@ class DatabaseAgentAdapter:
         user_message: str,
         context_clues: List[Dict[str, Any]],
     ) -> str:
+        return _upstage_chat_completion(prompt)
+
+    def generate_deduction_evaluation(self, prompt: str) -> str:
         return _upstage_chat_completion(prompt)
 
 
@@ -193,13 +216,9 @@ def generate_character_reply(
     return _upstage_chat_completion(prompt)
 
 
+def generate_deduction_evaluation(prompt: str) -> str:
+    return _upstage_chat_completion(prompt)
+
+
 def mark_clue_interacted(user_id: str, clue_id: int) -> None:
     raise NotImplementedError("mark_clue_interacted adapter is not wired yet")
-
-
-def unlock_clue(user_id: str, clue_id: int) -> None:
-    raise NotImplementedError("unlock_clue adapter is not wired yet")
-
-
-def unlock_character(user_id: str, character_id: int) -> None:
-    raise NotImplementedError("unlock_character adapter is not wired yet")

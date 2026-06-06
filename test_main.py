@@ -36,6 +36,13 @@ def setup_and_teardown_db(monkeypatch):
             "이 곳에는 LLM의 응답이 들어가게 됨."
         ),
     )
+    monkeypatch.setattr(
+        DatabaseAgentAdapter,
+        "generate_deduction_evaluation",
+        lambda self, prompt: (
+            '{"result": false, "comment": "ARIA API 오답 평가"}'
+        ),
+    )
     models.Base.metadata.create_all(bind=engine)
     yield
     models.Base.metadata.drop_all(bind=engine)
@@ -61,6 +68,18 @@ def test_update_clue_state_existing():
     assert response.status_code == 200
     assert response.json() == {"message": "Clue 1 state updated successfully."}
 
+def test_update_unknown_clue_returns_404():
+    response = client.post("/api/clues/999", headers={"user-id": "testuser"})
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Clue 999 not found"
+
+def test_update_clue_state_accepts_client_selected_clue():
+    response = client.post("/api/clues/3", headers={"user-id": "testuser"})
+
+    assert response.status_code == 200
+    assert response.json() == {"message": "Clue 3 state updated successfully."}
+
 def test_get_clues():
     client.post("/api/clues/1", headers={"user-id": "testuser"})
     client.post("/api/clues/2", headers={"user-id": "testuser"})
@@ -72,6 +91,7 @@ def test_get_clues():
     assert len(data["clues"]) == 2
     assert data["clues"][0]["clue_id"] == 1
     assert data["clues"][0]["interacted"] is True
+    assert {clue["clue_id"] for clue in data["clues"]} == {1, 2}
 
 def test_get_clues_empty():
     response = client.get("/api/clues", headers={"user-id": "newuser"})
@@ -89,6 +109,12 @@ def test_update_character_state():
     assert char_state.interacted is True
     db.close()
 
+def test_update_unknown_character_returns_404():
+    response = client.post("/api/character/999", headers={"user-id": "testuser"})
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Character 999 not found"
+
 def test_get_characters():
     client.post("/api/character/1", headers={"user-id": "testuser"})
     response = client.get("/api/characters", headers={"user-id": "testuser"})
@@ -105,6 +131,16 @@ def test_get_character_messages_empty():
     data = response.json()
     assert data["character_id"] == 1
     assert data["messages"] == []
+
+def test_create_message_unknown_character_returns_404():
+    response = client.post(
+        "/api/characters/999/messages",
+        headers={"user-id": "testuser"},
+        json={"content": "Hello"},
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Character 999 not found"
 
 def test_create_and_get_character_messages():
     # 메시지 생성
@@ -143,3 +179,4 @@ def test_submit_deduction():
     assert "comment" in data
     assert "result" in data
     assert data["result"] is False
+    assert data["comment"] == "ARIA API 오답 평가"
