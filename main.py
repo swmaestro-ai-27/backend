@@ -2,7 +2,6 @@ from fastapi import FastAPI, Depends, HTTPException, Request
 import models
 import schemas
 from agents.adapters import DatabaseAgentAdapter
-from agents.graphs.aria_clue_explain import AriaClueExplainGraph
 from agents.graphs.character_chat import AgentGenerationError, CharacterChatGraph
 from agents.graphs.deduction_evaluate import DeductionEvaluateGraph
 from database import SessionLocal, engine, migrate_sqlite_schema
@@ -61,8 +60,6 @@ def update_clue_state(
         db.add(clue_state)
         db.flush()
 
-    graph = AriaClueExplainGraph(adapter)
-    graph.invoke({"user_id": user_id, "clue_id": clue_id})
     db.commit()
     return {"message": f"Clue {clue_id} state updated successfully."}
 
