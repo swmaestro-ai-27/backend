@@ -153,29 +153,6 @@ class DatabaseAgentAdapter:
             )
         )
 
-    def unlock_clue(self, user_id: str, clue_id: int) -> None:
-        self.mark_clue_interacted(user_id, clue_id)
-
-    def unlock_character(self, user_id: str, character_id: int) -> None:
-        import models
-
-        character_state = (
-            self.db.query(models.CharacterState)
-            .filter(models.CharacterState.user_id == user_id)
-            .filter(models.CharacterState.character_id == character_id)
-            .first()
-        )
-        if character_state:
-            character_state.interacted = True
-            return
-        self.db.add(
-            models.CharacterState(
-                user_id=user_id,
-                character_id=character_id,
-                interacted=True,
-            )
-        )
-
     def generate_character_reply(
         self,
         prompt: str,
@@ -185,12 +162,7 @@ class DatabaseAgentAdapter:
     ) -> str:
         return _upstage_chat_completion(prompt)
 
-    def generate_deduction_comment(
-        self,
-        prompt: str,
-        result: bool,
-        failure_reason: str = None,
-    ) -> str:
+    def generate_deduction_evaluation(self, prompt: str) -> str:
         return _upstage_chat_completion(prompt)
 
 
@@ -244,21 +216,9 @@ def generate_character_reply(
     return _upstage_chat_completion(prompt)
 
 
-def generate_deduction_comment(
-    prompt: str,
-    result: bool,
-    failure_reason: str = None,
-) -> str:
+def generate_deduction_evaluation(prompt: str) -> str:
     return _upstage_chat_completion(prompt)
 
 
 def mark_clue_interacted(user_id: str, clue_id: int) -> None:
     raise NotImplementedError("mark_clue_interacted adapter is not wired yet")
-
-
-def unlock_clue(user_id: str, clue_id: int) -> None:
-    raise NotImplementedError("unlock_clue adapter is not wired yet")
-
-
-def unlock_character(user_id: str, character_id: int) -> None:
-    raise NotImplementedError("unlock_character adapter is not wired yet")

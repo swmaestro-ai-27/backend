@@ -3,7 +3,6 @@
 from typing import Any, Dict
 
 from agents import adapters
-from agents.progress import apply_next_unlock
 from agents.types import AriaClueExplainState
 
 
@@ -28,29 +27,10 @@ class AriaClueExplainGraph:
         aria_scripts = clue.get("aria_scripts") or clue.get("ariaScripts") or []
         explanation = "\n".join(str(script) for script in aria_scripts)
         self.adapters.mark_clue_interacted(user_id, clue_id)
-        next_unlock = clue.get("next_unlock") or clue.get("nextUnlock")
-        unlock_result = apply_next_unlock(
-            self.adapters,
-            {
-                "user_id": user_id,
-                "source_type": "clue",
-                "source_id": clue_id,
-                "next_unlock": next_unlock,
-            },
-        )
         debug_trace.append({"step": "build_aria_explanation", "clue_id": clue_id})
-        debug_trace.append(
-            {
-                "step": "apply_next_unlock",
-                "unlocked_target": unlock_result.get("unlocked_target"),
-                "error": unlock_result.get("error"),
-            }
-        )
 
         return {
             "explanation": explanation,
-            "next_unlock": next_unlock,
-            "unlocked_target": unlock_result.get("unlocked_target"),
             "debug_trace": debug_trace,
         }
 

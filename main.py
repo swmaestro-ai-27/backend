@@ -5,7 +5,6 @@ from agents.adapters import DatabaseAgentAdapter
 from agents.graphs.aria_clue_explain import AriaClueExplainGraph
 from agents.graphs.character_chat import AgentGenerationError, CharacterChatGraph
 from agents.graphs.deduction_evaluate import DeductionEvaluateGraph
-from agents.progress import apply_next_unlock
 from database import SessionLocal, engine, migrate_sqlite_schema
 from sqlalchemy.orm import Session
 
@@ -48,9 +47,6 @@ def update_clue_state(
     except KeyError as exc:
         db.rollback()
         raise HTTPException(status_code=404, detail=f"Clue {clue_id} not found") from exc
-    if not adapter.is_clue_unlocked(user_id, clue_id):
-        raise HTTPException(status_code=403, detail=f"Clue {clue_id} is locked")
-
     clue_state = (
         db.query(models.ClueState)
         .filter(models.ClueState.user_id == user_id)
@@ -104,7 +100,7 @@ def update_character_state(
 ):
     adapter = DatabaseAgentAdapter(db, user_id=user_id)
     try:
-        character = adapter.get_character(character_id)
+        adapter.get_character(character_id)
     except KeyError as exc:
         raise HTTPException(
             status_code=404,
@@ -128,15 +124,6 @@ def update_character_state(
         )
         db.add(character_state)
 
-    apply_next_unlock(
-        adapter,
-        {
-            "user_id": user_id,
-            "source_type": "character",
-            "source_id": character_id,
-            "next_unlock": character.get("next_unlock") or character.get("nextUnlock"),
-        },
-    )
     db.commit()
     return {"message": f"Character {character_id} state updated successfully."}
 
