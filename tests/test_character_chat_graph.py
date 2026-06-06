@@ -1,5 +1,6 @@
 import unittest
 
+from data.characters import CHARACTERS
 from agents.graphs.character_chat import CharacterChatGraph
 from agents.graphs.character_chat import AgentGenerationError
 from agents.guard import filter_context_clues
@@ -146,6 +147,29 @@ class CharacterChatGraphTest(unittest.TestCase):
 
             self.assertIn(character["name"], result["prompt"])
             self.assertIn(character["system_prompt"], result["prompt"])
+
+    def test_prompt_prevents_stiff_self_intro_response_style(self):
+        graph = CharacterChatGraph(FakeAdapter)
+
+        for character_id in FakeAdapter.characters:
+            result = graph.invoke(
+                {
+                    "user_id": "test-user",
+                    "character_id": character_id,
+                    "user_message": "너는 누구고 뭘 봐야 해?",
+                }
+            )
+
+            self.assertIn("자기소개로 시작하지 않는다", result["prompt"])
+            self.assertIn("실제 대화처럼 자연스럽게 말한다", result["prompt"])
+            self.assertIn("직책 소개", result["prompt"])
+
+    def test_static_character_prompts_keep_conversational_tone(self):
+        prompts = {character["name"]: character["system_prompt"] for character in CHARACTERS}
+
+        self.assertIn("대화하듯 자연스럽게", prompts["민재"])
+        self.assertIn("친구에게 털어놓듯 자연스럽게", prompts["하린"])
+        self.assertIn("강의하듯 풀어내지 않는다", prompts["도윤"])
 
     def test_spoiler_guard_replaces_locked_clue_leak(self):
         graph = CharacterChatGraph(
