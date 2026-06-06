@@ -2,6 +2,7 @@ import os
 from dotenv import load_dotenv
 from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 import models
 import schemas
 from agents.adapters import DatabaseAgentAdapter
@@ -18,12 +19,23 @@ migrate_sqlite_schema(engine)
 
 app = FastAPI()
 
-# CORS 미들웨어를 추가합니다.
-origins = [
-    # .env 파일에서 클라이언트 주소를 읽어옵니다.
-    # 값이 없으면 "http://localhost:3000"을 기본값으로 사용합니다.
-    os.environ.get("CLIENT_ORIGIN_URL", "http://localhost:3000")
-]
+
+def get_csv_env(name: str, default: str) -> list[str]:
+    raw_values = os.environ.get(name, default)
+    return [value.strip() for value in raw_values.split(",") if value.strip()]
+
+
+def get_client_origins() -> list[str]:
+    return get_csv_env("CLIENT_ORIGIN_URL", "http://localhost:3000")
+
+
+def get_trusted_proxy_ips() -> list[str]:
+    return get_csv_env("TRUSTED_PROXY_IPS", "127.0.0.1")
+
+
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=get_trusted_proxy_ips())
+
+origins = get_client_origins()
 
 app.add_middleware(
     CORSMiddleware,
