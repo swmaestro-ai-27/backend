@@ -4,7 +4,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from main import app, get_db
+from main import app, get_client_origins, get_db, get_trusted_proxy_ips
 import models
 
 # 테스트용 데이터베이스 설정 (인메모리 SQLite)
@@ -153,6 +153,24 @@ def test_cors_allowed_origin():
     assert response.status_code == 200
     assert response.headers["access-control-allow-origin"] == allowed_origin
 
+def test_cors_origin_config_accepts_comma_separated_values(monkeypatch):
+    monkeypatch.setenv(
+        "CLIENT_ORIGIN_URL",
+        "https://game.example.com, https://admin.example.com",
+    )
+
+    assert get_client_origins() == [
+        "https://game.example.com",
+        "https://admin.example.com",
+    ]
+
+
+def test_trusted_proxy_ips_config_accepts_comma_separated_values(monkeypatch):
+    monkeypatch.setenv("TRUSTED_PROXY_IPS", "127.0.0.1, 172.18.0.0/16")
+
+    assert get_trusted_proxy_ips() == ["127.0.0.1", "172.18.0.0/16"]
+
+
 def test_cors_disallowed_origin():
     """허용되지 않은 출처(Origin)에서 온 요청을 테스트합니다."""
     # 필수 헤더인 'user-id'를 추가합니다.
@@ -175,3 +193,21 @@ def test_cors_preflight_request():
     assert response.headers["access-control-allow-origin"] == allowed_origin
     assert "access-control-allow-methods" in response.headers
     assert "access-control-allow-headers" in response.headers
+
+
+def test_cors_preflight_behind_nginx_proxy_manager():
+    """Nginx Proxy Manager forwards public scheme and host to the backend."""
+    allowed_origin = os.environ.get("CLIENT_ORIGIN_URL", "http://localhost:3000")
+    headers = {
+        "Origin": allowed_origin,
+        "Access-Control-Request-Method": "POST",
+        "Access-Control-Request-Headers": "X-User-Id, Content-Type",
+        "X-Forwarded-Proto": "https",
+        "X-Forwarded-Host": "api.example.com",
+        "Host": "backend:8000",
+    }
+
+    response = client.options("/api/clues/1", headers=headers)
+
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == allowed_origin
